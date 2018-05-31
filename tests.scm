@@ -4,13 +4,11 @@
 
 (define (run-test test)
   (let ((result ((test-function test))))
-    (begin 
+    (begin
       (newline)
-      (display "Testing: ")
-      (display (test-name test))
-      (display " - result - ")
       (display result)
-      result)))
+      (display " - ")
+      (display (test-name test)))))
 
 (define (run-tests tests)
   (define (iter tests pass fail)
@@ -67,21 +65,102 @@
         (eq? 'item-not-in-inventory
              (check-stock inventory 'steel))))))
 
+(define inventory-needed-test
+  (make-test
+    'inventory-needed-test
+    (lambda ()
+      (let ((requirements (test-hospital 'requirements)))
+        (let ((needed (inventory-needed requirements 10.0)))
+          (and (= (needed-amount needed 'workers) 1.0)
+               (= (needed-amount needed 'scrubs) 1.0)
+               (= (needed-amount needed 'buildings) 10.0)
+               (= (needed-amount needed 'drugs) 5.0)))))))
+
+(define subtract-inventory-test
+  (make-test
+    'subtract-inventory-test
+    (lambda ()
+      (let ((test-hosp (make-test-hospital)))
+        (let ((requirements (test-hosp 'requirements))
+              (inventory (test-hosp 'inventory)))
+          (let ((needed (inventory-needed requirements 10.0)))
+            (begin (subtract-inventory! inventory needed)
+                   (and (= (check-stock inventory 'workers) 9.0)
+                        (= (check-stock inventory 'drugs) 20.0)))))))))
+
 ;; PRODUCER TESTS
+
+(define (make-test-hospital)
+  (make-producer 'healthcare 
+                 23
+                 (make-inventory
+                   (list
+                     (make-inventory-entry 'workers 10 3)
+                     (make-inventory-entry 'scrubs 32 3)
+                     (make-inventory-entry 'buildings 50 3)
+                     (make-inventory-entry 'drugs 25 0)))
+                '((workers 0.1)
+                  (scrubs 0.1)
+                  (buildings 1.0)
+                  (drugs 0.5))))
 
 (define producer-has-name
   (make-test
     'test-producer-has-name
-    (lambda ()
-      (let ((hospital
-              (make-producer 'healthcare 
-                             23
-                             (list 'workers 0.1
-                                   'scrubs 0.1
-                                   'buildings 1.0
-                                   'drugs 0.5))))
-        (eq? (product hospital) 'healthcare)))))
+    (lambda () (eq? (product (make-test-hospital)) 'healthcare))))
 
+(define test-producer-produces
+  (make-test
+    'test-producer-produces
+    (lambda ()
+      (let ((test-hosp (make-test-hospital)))
+        (let ((starting-stock (producer-stock test-hosp)))
+          (begin (test-hosp 'produce)
+                 (= (- (producer-stock test-hosp) starting-stock)
+                       50)))))))
+
+(define production-exhausts-inventory
+  (make-test
+    'production-exhausts-inventory
+    (lambda ()
+      (let ((test-hosp (make-test-hospital))
+            (first-round '*unassigned*))
+        (begin (test-hosp 'produce)
+               (set! first-round (producer-stock test-hosp))
+               (test-hosp 'produce)
+               (= (producer-stock test-hosp) first-round))))))
+
+(define producer-saves-history
+  (make-test
+    'producer-saves-history
+    (lambda ()
+      (let ((test-hosp (make-test-hospital)))
+        (let ((starting-stock (producer-stock test-hosp)))
+          (begin (test-hosp 'produce)
+                 (test-hosp 'produce)
+                 (and
+                   (= (cadr (test-hosp 'history))
+                      (- (producer-stock test-hosp) starting-stock))
+                   (= (car (test-hosp 'history)) 0))))))))
+
+(define producer-receives-order
+  (make-test
+    'producer-receives-order
+    (lambda ()
+      (let ((test-hosp (make-test-hospital))
+            (test-order1 (make-order 'healthcare 23))
+            (test-order2 (make-order 'healthcare 15)))
+        (begin (take-order! test-hosp test-order1)
+               (take-order! test-hosp test-order2)
+               (test-hosp 'add-new-orders!)
+               (= (amount-on-order test-hosp) 38))))))
+
+(define amount-on-order-is-zero-at-start
+  (make-test
+    'amount-on-order-is-zero-at-start
+    (lambda ()
+      (let ((test-hosp (make-test-hospital)))
+        (= (amount-on-order test-hosp) 0)))))
 
 ;; PUT YOUR TESTS HERE!
 
@@ -91,6 +170,13 @@
         test-inventory-search
         test-inventory-error
         producer-has-name
+        inventory-needed-test
+        subtract-inventory-test
+        test-producer-produces
+        production-exhausts-inventory
+        producer-saves-history
+        producer-receives-order
+        amount-on-order-is-zero-at-start
         ))
 
 (run-tests tests-to-run)
