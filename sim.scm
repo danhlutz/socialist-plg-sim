@@ -11,8 +11,16 @@
 
 (define (make-inventory items) items)
 
+(define (get-inventory-item inventory product)
+  (assq product inventory))
+
 (define (subtract-inventory-item! item amount)
   (set-car! (cdr item) (- (in-stock item) amount))
+  'done)
+
+(define (add-inventory-item! item amount)
+  (set-car! (cddr item) (- (ordered item) amount))
+  (set-car! (cdr item) (+ (in-stock item) amount))
   'done)
 
 (define (check-stock inventory item)
@@ -20,6 +28,14 @@
     (if item-entry
         (in-stock item-entry)
         'item-not-in-inventory)))
+
+(define (check-producer-stock producer item)
+  (check-stock (producer 'inventory) item))
+
+(define (check-producer-ordered-amount producer ordered-item)
+  (let ((inventory (producer 'inventory)))
+    (let ((item (assq ordered-item inventory)))
+      (ordered item))))
 
 (define (subtract-inventory! inventory needs)
   (if (null? needs)
@@ -74,6 +90,18 @@
 (define (take-order! producer order)
   ((producer 'take-order!) order))
 
+;; SHIPMENTS
+
+(define (make-shipment product amount to)
+  (list product amount to))
+
+(define (shipment-product shipment) (car shipment))
+(define (shipment-amount shipment) (cadr shipment))
+(define (shipment-to shipment) (caddr shipment))
+
+(define (receive-shipment! producer shipment)
+  ((producer 'receive-shipment!) shipment))
+
 ;; PRODUCERS
 
 (define (make-producer product stock inventory requirements)
@@ -111,17 +139,20 @@
     (define (amount-on-order-internal items)
       (fold-right + 0
                   (map order-amount items)))
-    ;; TODOS
-    ;; ** need to figure out correct interface between orders and delivery /
-    ;; -> deliver-order
-    ;;    process an order, decrement stock
-    ;; -> make-order
-    ;;    estimate what will be needed taking into account what has 
-    ;;    already been ordered
-    ;;    send an order to another producer
-    ;;    update amount ordered
-    ;; -> receive-order
-    ;;    add-order to new-orders-queue
+
+    ;; STILL TO DO: 
+    ;; --> PLAN --> take the amount on ordered and make orders
+
+    ;; SHIPMENTS GO HERE
+    ;; --> take a shipment and update inventory
+    ;; --> make a shipment
+    (define (receive-shipment-internal! shipment)
+      (let ((product (shipment-product shipment)))
+        (let ((inventory-item (get-inventory-item 
+                                inventory product)))
+          (add-inventory-item! 
+            inventory-item (shipment-amount shipment))
+          'done)))
     ;; DISPTACH
     (define (dispatch msg)
       (cond ((eq? msg 'product) product)
@@ -135,6 +166,7 @@
             ((eq? msg 'add-new-orders!) (add-new-orders!))
             ((eq? msg 'amount-on-order)
              (amount-on-order-internal orders))
+            ((eq? msg 'receive-shipment!) receive-shipment-internal!)
             (else (error "Undefined message -- MAKE-PRODUCER" msg))))
     dispatch))
 

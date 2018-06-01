@@ -8,7 +8,8 @@
       (newline)
       (display result)
       (display " - ")
-      (display (test-name test)))))
+      (display (test-name test))
+      result)))
 
 (define (run-tests tests)
   (define (iter tests pass fail)
@@ -69,12 +70,13 @@
   (make-test
     'inventory-needed-test
     (lambda ()
-      (let ((requirements (test-hospital 'requirements)))
-        (let ((needed (inventory-needed requirements 10.0)))
-          (and (= (needed-amount needed 'workers) 1.0)
-               (= (needed-amount needed 'scrubs) 1.0)
-               (= (needed-amount needed 'buildings) 10.0)
-               (= (needed-amount needed 'drugs) 5.0)))))))
+      (let ((test-hosp (make-test-hospital)))
+        (let ((requirements (test-hosp 'requirements)))
+          (let ((needed (inventory-needed requirements 10.0)))
+            (and (= (needed-amount needed 'workers) 1.0)
+                 (= (needed-amount needed 'scrubs) 1.0)
+                 (= (needed-amount needed 'buildings) 10.0)
+                 (= (needed-amount needed 'drugs) 5.0))))))))
 
 (define subtract-inventory-test
   (make-test
@@ -98,7 +100,7 @@
                      (make-inventory-entry 'workers 10 3)
                      (make-inventory-entry 'scrubs 32 3)
                      (make-inventory-entry 'buildings 50 3)
-                     (make-inventory-entry 'drugs 25 0)))
+                     (make-inventory-entry 'drugs 25 100.0)))
                 '((workers 0.1)
                   (scrubs 0.1)
                   (buildings 1.0)
@@ -162,6 +164,39 @@
       (let ((test-hosp (make-test-hospital)))
         (= (amount-on-order test-hosp) 0)))))
 
+;; SHIPMENT TESTS
+
+(define (make-test-shipment)
+  (make-shipment 'drugs 15.3 'healthcare))
+
+(define make-shipment-test
+  (make-test
+    'make-shipment-test
+    (lambda ()
+      (let ((shipment1 (make-shipment 'coal 34.2 'steel)))
+        (and (eq? (shipment-product shipment1) 'coal)
+             (eq? (shipment-to shipment1) 'steel)
+             (= (shipment-amount shipment1) 34.2))))))
+
+(define receive-shipment-test
+  (make-test
+    'receive-shipment-test
+    (lambda ()
+      (let ((shipment1 (make-test-shipment))
+            (test-hosp (make-test-hospital)))
+        (begin (receive-shipment! test-hosp shipment1)
+               (= (check-producer-stock test-hosp 'drugs) 40.3))))))
+
+(define shipment-reduces-ordered-amount
+  (make-test
+    'shipment-reduces-ordered-amount
+    (lambda ()
+      (let ((shipment1 (make-test-shipment))
+            (test-hosp (make-test-hospital)))
+        (begin (receive-shipment! test-hosp shipment1)
+               (= (check-producer-ordered-amount test-hosp 'drugs)
+                  (- 100.0 15.3)))))))
+
 ;; PUT YOUR TESTS HERE!
 
 (define tests-to-run
@@ -177,6 +212,9 @@
         producer-saves-history
         producer-receives-order
         amount-on-order-is-zero-at-start
+        make-shipment-test
+        receive-shipment-test
+        shipment-reduces-ordered-amount
         ))
 
 (run-tests tests-to-run)
