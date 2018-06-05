@@ -81,11 +81,12 @@
 
 ;; ORDERS
 
-(define (make-order product amount)
-  (list product amount))
+(define (make-order product amount deliver-to)
+  (list product amount deliver-to))
 
 (define (order-product order) (car order))
 (define (order-amount order) (cadr order))
+(define (order-deliver-to order) (caddr order))
 
 (define (take-order! producer order)
   ((producer 'take-order!) order))
@@ -140,12 +141,13 @@
       (fold-right + 0
                   (map order-amount items)))
 
+    
     ;; STILL TO DO: 
     ;; --> PLAN --> take the amount on ordered and make orders
+    ;; --> fulfil orders
+    
 
     ;; SHIPMENTS GO HERE
-    ;; --> take a shipment and update inventory
-    ;; --> make a shipment
     (define (receive-shipment-internal! shipment)
       (let ((product (shipment-product shipment)))
         (let ((inventory-item (get-inventory-item 
@@ -153,6 +155,22 @@
           (add-inventory-item! 
             inventory-item (shipment-amount shipment))
           'done)))
+    (define (make-shipments-internal order-list)
+      (if (null? order-list)
+          '()
+          (let ((first-order (car order-list))
+                (rest-orders (cdr order-list)))
+            (if (<= (order-amount first-order) stock)
+                (ship-and-process first-order rest-orders)
+                (make-shipments-internal rest-orders)))))
+    (define (ship-and-process first rest)
+      (let ((shipment (make-shipment product
+                                     (order-amount first)
+                                     (order-deliver-to first))))
+        (begin (set! stock (- stock (order-amount first)))
+               (cons shipment
+                     (make-shipments-internal rest)))))
+
     ;; DISPTACH
     (define (dispatch msg)
       (cond ((eq? msg 'product) product)
@@ -167,6 +185,7 @@
             ((eq? msg 'amount-on-order)
              (amount-on-order-internal orders))
             ((eq? msg 'receive-shipment!) receive-shipment-internal!)
+            ((eq? msg 'make-shipments) (make-shipments-internal orders))
             (else (error "Undefined message -- MAKE-PRODUCER" msg))))
     dispatch))
 
@@ -178,3 +197,47 @@
 
 (define (amount-on-order producer)
   (producer 'amount-on-order))
+
+(define (fulfil-orders! producer economy)
+  (let ((shipments (producer 'make-shipments)))
+    ((economy 'distribute-shipments) shipments)))
+
+;; PLAN-DRIVERS
+
+;; define a plan-driver that can make and receive orders
+;; make-plan-driver takes a product and a target function
+
+;; THE ECONOMY
+
+(define (make-economy producer-list plan-driver-list)
+  (let ((units (map (lambda (x)
+                      (list (x 'product) x))
+                    (append producer-list plan-driver-list))))
+    ;; LOOKUP-PRODUCER
+    (define (lookup-producer shipment)
+      (cadr (assq (shipment-to shipment) units)))
+    ;; DISTRIBUTE SHIPMENTS
+    (define (distribute-shipments-internal shipments)
+      (if (null? shipments)
+          'done
+          (let ((first-shipment (car shipments))
+                (rest-shipments (cdr shipments)))
+            (let ((producer (lookup-producer first-shipment)))
+              (begin (receive-shipment! producer first-shipment)
+                     (distribute-shipments-internal rest-shipments))))))
+    (define (dispatch msg)
+      (cond ((eq? msg 'distribute-shipments) distribute-shipments-internal)
+            (else 
+              (error "Undefined message -- MAKE-ECONOMY" msg))))
+    dispatch))
+
+;; TO DO 
+;; --> make an economy method
+;; that handles production, orders, and reporting for producers
+
+;; THE SIMULATION
+;; simulate steps
+;; --> produce 
+;; --> fulfil orders
+;; --> plan-and-order
+;; --> report 

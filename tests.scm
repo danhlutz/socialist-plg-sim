@@ -1,4 +1,4 @@
-(load "sim.scm")
+(load "simtools.scm")
 
 ;; BASIC TEST PROCEDURES
 
@@ -150,8 +150,8 @@
     'producer-receives-order
     (lambda ()
       (let ((test-hosp (make-test-hospital))
-            (test-order1 (make-order 'healthcare 23))
-            (test-order2 (make-order 'healthcare 15)))
+            (test-order1 (make-order 'healthcare 23 'workforce))
+            (test-order2 (make-order 'healthcare 15 'steelmill)))
         (begin (take-order! test-hosp test-order1)
                (take-order! test-hosp test-order2)
                (test-hosp 'add-new-orders!)
@@ -197,6 +197,54 @@
                (= (check-producer-ordered-amount test-hosp 'drugs)
                   (- 100.0 15.3)))))))
 
+;; ORDER TESTS
+
+(define (make-test-steelmill)
+  (make-producer 'steelmill 
+                 23
+                 (make-inventory
+                   (list
+                     (make-inventory-entry 'workers 20.0 7)
+                     (make-inventory-entry 'buildings 100 3)
+                     (make-inventory-entry 'machinery 20 5)
+                     (make-inventory-entry 'electricity 32 100.0)
+                     (make-inventory-entry 'ore 302 50)))
+                '((workers 0.1)
+                  (buildings 0.2)
+                  (machinery 0.05)
+                  (electricity 10.0)
+                  (ore 1.2))))
+
+(define (make-test-power-grid)
+  (make-producer 'electricity 
+                 300
+                 (make-inventory
+                   (list
+                     (make-inventory-entry 'workers 500.0 7)
+                     (make-inventory-entry 'buildings 100 3)
+                     (make-inventory-entry 'coal 50 3) ;; for still days
+                     (make-inventory-entry 'windmills 2000 5)))
+                '((workers 0.1)
+                  (buildings 0.2)
+                  (coal 0.01)
+                  (windmills 0.1))))
+
+(define test-order-fulfilment
+  (make-test
+    'test-order-fulfilment
+    (lambda ()
+      (let ((dynamo (make-test-power-grid))
+            (steelmill (make-test-steelmill))
+            (test-order (make-order 'electricity 200 'steelmill)))
+        (let ((test-economy (make-economy (list dynamo steelmill)
+                                          '())))
+          (begin (take-order! dynamo test-order)
+                 (dynamo 'add-new-orders!)
+                 (fulfil-orders! dynamo test-economy)
+                 (and (= (producer-stock dynamo) 100)
+                      (= (check-producer-stock steelmill 'electricity)
+                         232))))))))
+
 ;; PUT YOUR TESTS HERE!
 
 (define tests-to-run
@@ -215,6 +263,7 @@
         make-shipment-test
         receive-shipment-test
         shipment-reduces-ordered-amount
+        test-order-fulfilment
         ))
 
 (run-tests tests-to-run)
