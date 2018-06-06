@@ -27,6 +27,12 @@
 (define (test-name test) (car test))
 (define (test-function test) (cadr test))
 
+(define (fail-test msg)
+  (lambda ()
+    (newline)
+    (display msg)
+    #f))
+
 ;; INVENTORY TESTS
 
 (define inventory-test-1
@@ -200,7 +206,7 @@
 ;; ORDER TESTS
 
 (define (make-test-steelmill)
-  (make-producer 'steelmill 
+  (make-producer 'steel
                  23
                  (make-inventory
                    (list
@@ -229,13 +235,47 @@
                   (coal 0.01)
                   (windmills 0.1))))
 
+(define (make-test-workforce)
+  (make-producer 'workers
+                 200
+                 (list (make-inventory-entry 'healthcare 100 0)
+                       (make-inventory-entry 'childcare 100 0)
+                       (make-inventory-entry 'food 2500 0)
+                       (make-inventory-entry 'buildings 1000 0))
+                 '((healthcare 0.05)
+                   (childcare 0.25)
+                   (food 10.0)
+                   (buildings 1.0))))
+
+(define (make-test-buildings)
+  (make-producer 'buildings
+                 200
+                 (list (make-inventory-entry 'workers 200 0)
+                       (make-inventory-entry 'lumber 300 0))
+                 '((workers 0.1) (lumber 2.0))))
+
+(define (make-test-coalmine)
+  (make-producer 'coal
+                 200
+                 (list (make-inventory-entry 'workers 200 0)
+                       (make-inventory-entry 'tools 100 0))
+                '((workers 0.2) (tools 0.3))))
+
+(define (make-test-windmill-factory)
+  (make-producer 'windmills
+                 200
+                 (list (make-inventory-entry 'workers 100 30)
+                       (make-inventory-entry 'tools 50 0)
+                       (make-inventory-entry 'steel 30 0))
+                 '((workers 0.2) (tools 0.1) (steel 0.8))))
+
 (define test-order-fulfilment
   (make-test
     'test-order-fulfilment
     (lambda ()
       (let ((dynamo (make-test-power-grid))
             (steelmill (make-test-steelmill))
-            (test-order (make-order 'electricity 200 'steelmill)))
+            (test-order (make-order 'electricity 200 'steel)))
         (let ((test-economy (make-economy (list dynamo steelmill)
                                           '())))
           (begin (take-order! dynamo test-order)
@@ -244,6 +284,36 @@
                  (and (= (producer-stock dynamo) 100)
                       (= (check-producer-stock steelmill 'electricity)
                          232))))))))
+
+(define test-plan-creates-orders
+  (make-test
+    'test-plan-creates-orders
+    (lambda ()
+      (let ((dynamo (make-test-power-grid))
+            (steelmill (make-test-steelmill))
+            (workforce (make-test-workforce))
+            (buildings (make-test-buildings))
+            (coalmine (make-test-coalmine))
+            (windmills (make-test-windmill-factory))
+            (test-order (make-order 'electricity 600 'steel)))
+        (let ((test-economy 
+                (make-economy (list dynamo steelmill workforce
+                                    buildings coalmine windmills) '())))
+          (begin (take-order! dynamo test-order)
+                 (plan! dynamo test-economy)
+                 (test-economy 'append-new-orders!)
+                 (and (= (amount-on-order workforce) 30.0)
+                      (= (amount-on-order coalmine) 3.0))))))))
+
+(define test-plan-adjusts-amount-ordered
+  (make-test
+    'test-plan-adjusts-amount-ordered
+    (fail-test "Adjust the amount ordered in the ordering inventory")))
+
+(define test-plan-doesnt-order-whats-been-ordered
+  (make-test
+    'test-plan-doesnt-order-whats-been-ordered
+    (fail-test "Subtract what is needed from what is being ordered")))
 
 ;; PUT YOUR TESTS HERE!
 
@@ -264,6 +334,9 @@
         receive-shipment-test
         shipment-reduces-ordered-amount
         test-order-fulfilment
+        test-plan-creates-orders
+        test-plan-adjusts-amount-ordered
+        test-plan-doesnt-order-whats-been-ordered
         ))
 
 (run-tests tests-to-run)

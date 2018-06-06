@@ -140,13 +140,6 @@
     (define (amount-on-order-internal items)
       (fold-right + 0
                   (map order-amount items)))
-
-    
-    ;; STILL TO DO: 
-    ;; --> PLAN --> take the amount on ordered and make orders
-    ;; --> fulfil orders
-    
-
     ;; SHIPMENTS GO HERE
     (define (receive-shipment-internal! shipment)
       (let ((product (shipment-product shipment)))
@@ -170,7 +163,19 @@
         (begin (set! stock (- stock (order-amount first)))
                (cons shipment
                      (make-shipments-internal rest)))))
-
+    ;; PLAN
+    (define (plan-production-internal)
+      (let ((shortfall (- stock (amount-on-order-internal orders))))
+        (if (<= shortfall 0)
+            '()
+            (generate-orders shortfall))))
+    (define (generate-orders shortfall)
+      (map (lambda (req) (plan-order req shortfall))
+           requirements))
+    (define (plan-order requirement amount)
+      (make-order (requirement-item requirement)
+                  (* amount (requirement-amount requirement))
+                  product))
     ;; DISPTACH
     (define (dispatch msg)
       (cond ((eq? msg 'product) product)
@@ -186,6 +191,7 @@
              (amount-on-order-internal orders))
             ((eq? msg 'receive-shipment!) receive-shipment-internal!)
             ((eq? msg 'make-shipments) (make-shipments-internal orders))
+            ((eq? msg 'plan-production) (plan-production-internal))
             (else (error "Undefined message -- MAKE-PRODUCER" msg))))
     dispatch))
 
@@ -202,6 +208,10 @@
   (let ((shipments (producer 'make-shipments)))
     ((economy 'distribute-shipments) shipments)))
 
+(define (plan! producer economy)
+  (let ((orders (producer 'plan-production)))
+    ((economy 'distribute-orders!) orders)))
+
 ;; PLAN-DRIVERS
 
 ;; define a plan-driver that can make and receive orders
@@ -209,24 +219,45 @@
 
 ;; THE ECONOMY
 
+(define (make-unit producer)
+  (list (producer 'product) producer))
+
+(define (unit-product unit) (car unit))
+(define (unit-producer unit) (cadr unit))
+
 (define (make-economy producer-list plan-driver-list)
-  (let ((units (map (lambda (x)
-                      (list (x 'product) x))
+  (let ((units (map make-unit
                     (append producer-list plan-driver-list))))
     ;; LOOKUP-PRODUCER
-    (define (lookup-producer shipment)
-      (cadr (assq (shipment-to shipment) units)))
+    (define (lookup-producer product)
+      (unit-producer (assq product units)))
+    ;; APPEND NEW ORDERS
+    (define (append-new-orders-internal!)
+      (begin (map (lambda (unit) ((unit-producer unit) 'add-new-orders!)) 
+                  units)
+             'done))
     ;; DISTRIBUTE SHIPMENTS
     (define (distribute-shipments-internal shipments)
       (if (null? shipments)
           'done
           (let ((first-shipment (car shipments))
                 (rest-shipments (cdr shipments)))
-            (let ((producer (lookup-producer first-shipment)))
+            (let ((producer (lookup-producer (shipment-to first-shipment))))
               (begin (receive-shipment! producer first-shipment)
                      (distribute-shipments-internal rest-shipments))))))
+    ;; DISTRIBUTE ORDERS
+    (define (distribute-orders-internal! orders)
+      (if (null? orders)
+          'done
+          (let ((first-order (car orders)) 
+                (rest-orders (cdr orders)))
+            (let ((producer (lookup-producer (order-product first-order))))
+              (begin (take-order! producer first-order)
+                     (distribute-orders-internal! rest-orders))))))
     (define (dispatch msg)
       (cond ((eq? msg 'distribute-shipments) distribute-shipments-internal)
+            ((eq? msg 'distribute-orders!) distribute-orders-internal!)
+            ((eq? msg 'append-new-orders!) (append-new-orders-internal!))
             (else 
               (error "Undefined message -- MAKE-ECONOMY" msg))))
     dispatch))
