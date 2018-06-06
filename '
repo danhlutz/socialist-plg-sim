@@ -4,17 +4,12 @@
 
 (define (run-test test)
   (let ((result ((test-function test))))
-    (if result
-        (display ".")
-        (begin (newline)
-               (display "-------------------------------------------")
-               (newline)
-               (display "TEST FAILED: ")
-               (display (test-name test))
-               (newline)
-               (display "-------------------------------------------")
-               (newline)
-               result))))
+    (begin
+      (newline)
+      (display result)
+      (display " - ")
+      (display (test-name test))
+      result)))
 
 (define (run-tests tests)
   (define (iter tests pass fail)
