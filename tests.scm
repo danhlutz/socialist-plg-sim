@@ -234,10 +234,10 @@
                  300
                  (make-inventory
                    (list
-                     (make-inventory-entry 'workers 500.0 7)
-                     (make-inventory-entry 'buildings 100 3)
-                     (make-inventory-entry 'coal 50 3) ;; for still days
-                     (make-inventory-entry 'windmills 2000 5)))
+                     (make-inventory-entry 'workers 0 0)
+                     (make-inventory-entry 'buildings 100 10)
+                     (make-inventory-entry 'coal 1.0 0) ;; for still days
+                     (make-inventory-entry 'windmills 0 1)))
                 '((workers 0.1)
                   (buildings 0.2)
                   (coal 0.01)
@@ -311,17 +311,50 @@
                  (plan! dynamo test-economy)
                  (test-economy 'append-new-orders!)
                  (and (= (amount-on-order workforce) 30.0)
-                      (= (amount-on-order coalmine) 3.0))))))))
+                      (= (amount-on-order coalmine) 2.0))))))))
 
 (define test-plan-adjusts-amount-ordered
   (make-test
     'test-plan-adjusts-amount-ordered
-    (fail-test "Adjust the amount ordered in the ordering inventory")))
+    (lambda ()
+      (let ((dynamo (make-test-power-grid))
+            (steelmill (make-test-steelmill))
+            (workforce (make-test-workforce))
+            (buildings (make-test-buildings))
+            (coalmine (make-test-coalmine))
+            (windmills (make-test-windmill-factory))
+            (test-order (make-order 'electricity 600 'steel)))
+        (let ((test-economy 
+                (make-economy (list dynamo steelmill workforce
+                                    buildings coalmine windmills) '())))
+          (begin (take-order! dynamo test-order)
+                 (plan! dynamo test-economy)
+                 (and (= (check-producer-ordered-amount
+                           dynamo 'workers) 
+                         30.0)
+                      (= (check-producer-ordered-amount
+                           dynamo 'coal) 2.0))))))))
 
 (define test-plan-doesnt-order-whats-been-ordered
   (make-test
     'test-plan-doesnt-order-whats-been-ordered
-    (fail-test "Subtract what is needed from what is being ordered")))
+    (lambda ()
+      (let ((dynamo (make-test-power-grid))
+            (steelmill (make-test-steelmill))
+            (workforce (make-test-workforce))
+            (buildings (make-test-buildings))
+            (coalmine (make-test-coalmine))
+            (windmills (make-test-windmill-factory))
+            (test-order (make-order 'electricity 600 'steel)))
+        (let ((test-economy 
+                (make-economy (list dynamo steelmill workforce
+                                    buildings coalmine windmills) '())))
+          (begin (take-order! dynamo test-order)
+                 (plan! dynamo test-economy)
+                 (test-economy 'append-new-orders!)
+                 (and (= (check-producer-ordered-amount dynamo 'windmills)
+                         30.0)
+                      (= (amount-on-order windmills) 29.0))))))))
 
 ;; PUT YOUR TESTS HERE!
 

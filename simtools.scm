@@ -14,6 +14,9 @@
 (define (get-inventory-item inventory product)
   (assq product inventory))
 
+(define (set-amount-ordered! item amount-ordered)
+  (set-car! (cddr item) amount-ordered))
+
 (define (subtract-inventory-item! item amount)
   (set-car! (cdr item) (- (in-stock item) amount))
   'done)
@@ -172,10 +175,24 @@
     (define (generate-orders shortfall)
       (map (lambda (req) (plan-order req shortfall))
            requirements))
+    (define (calculate-order-amount requirement amount)
+      (let ((inventory-item (assq (requirement-item requirement)
+                                  inventory)))
+        (let ((amount-in-stock (in-stock inventory-item))
+              (amount-ordered (ordered inventory-item)))
+          (- (* amount (requirement-amount requirement))
+             (+ amount-in-stock amount-ordered)))))
     (define (plan-order requirement amount)
-      (make-order (requirement-item requirement)
-                  (* amount (requirement-amount requirement))
-                  product))
+      (let ((amount-to-order (calculate-order-amount requirement amount))
+            (inventory-item (assq (requirement-item requirement) 
+                                  inventory)))
+        (begin
+          (set-amount-ordered! 
+            inventory-item 
+            (+ (ordered inventory-item) amount-to-order))
+          (make-order (requirement-item requirement)
+                      amount-to-order
+                      product))))
     ;; DISPTACH
     (define (dispatch msg)
       (cond ((eq? msg 'product) product)
