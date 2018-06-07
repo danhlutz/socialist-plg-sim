@@ -1,7 +1,12 @@
 ;; INVENTORY
 
 (define (make-inventory-entry product in-stock ordered)
-  (list product in-stock ordered))
+  (cond ((< in-stock 0)
+         (error "Stock cannot be less than 0 -- MAKE-INVENTORY-ENTRY"))
+        ((< ordered 0)
+         (error
+           "Ordered amount cannot be less than 0 -- MAKE-INVENTORY-ENTRY"))
+        (else (list product in-stock ordered))))
 
 (define (inventory-product inventory-entry) (car inventory-entry))
 
@@ -233,8 +238,6 @@
 
 (define (plan! producer economy)
   (let ((orders (producer 'plan-production)))
-    (newline)
-    (display (list 'plan-orders orders))
     ((economy 'distribute-orders!) orders)))
 
 ;; PLAN-DRIVERS

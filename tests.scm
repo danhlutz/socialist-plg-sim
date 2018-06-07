@@ -382,9 +382,6 @@
           (begin (take-order! dynamo test-order)
                  (plan! dynamo test-economy)
                  (test-economy 'append-new-orders!)
-                 (newline)
-                 (display "building orders: ")
-                 (display (buildings 'order-list))
                  (= (length (buildings 'order-list)) 0)))))))
 
 ;; PUT YOUR TESTS HERE!
@@ -394,6 +391,7 @@
         test-ordered-amount
         test-inventory-search
         test-inventory-error
+        ;; producer tests
         producer-has-name
         inventory-needed-test
         subtract-inventory-test
