@@ -213,6 +213,15 @@
 
 ;; ORDER TESTS
 
+(define negative-order-sends-signal
+  (make-test
+    'negative-order-sends-signal
+    (lambda ()
+      (let ((order1 (make-order 'manure -30 'farm)))
+        (= (order-amount order1) 0)))))
+
+;; PLANNING TESTS
+
 (define (make-test-steelmill)
   (make-producer 'steel
                  23
@@ -356,6 +365,28 @@
                          30.0)
                       (= (amount-on-order windmills) 29.0))))))))
 
+(define zero-orders-not-delivered
+  (make-test
+    'zero-orders-not-delivered
+    (lambda ()
+      (let ((dynamo (make-test-power-grid))
+            (steelmill (make-test-steelmill))
+            (workforce (make-test-workforce))
+            (buildings (make-test-buildings))
+            (coalmine (make-test-coalmine))
+            (windmills (make-test-windmill-factory))
+            (test-order (make-order 'electricity 600 'steel)))
+        (let ((test-economy 
+                (make-economy (list dynamo steelmill workforce
+                                    buildings coalmine windmills) '())))
+          (begin (take-order! dynamo test-order)
+                 (plan! dynamo test-economy)
+                 (test-economy 'append-new-orders!)
+                 (newline)
+                 (display "building orders: ")
+                 (display (buildings 'order-list))
+                 (= (length (buildings 'order-list)) 0)))))))
+
 ;; PUT YOUR TESTS HERE!
 
 (define tests-to-run
@@ -374,10 +405,12 @@
         make-shipment-test
         receive-shipment-test
         shipment-reduces-ordered-amount
+        negative-order-sends-signal
         test-order-fulfilment
         test-plan-creates-orders
         test-plan-adjusts-amount-ordered
         test-plan-doesnt-order-whats-been-ordered
+        zero-orders-not-delivered
         ))
 
 (run-tests tests-to-run)

@@ -85,7 +85,9 @@
 ;; ORDERS
 
 (define (make-order product amount deliver-to)
-  (list product amount deliver-to))
+  (if (< amount 0)
+      (make-order product 0 deliver-to)
+      (list product amount deliver-to)))
 
 (define (order-product order) (car order))
 (define (order-amount order) (cadr order))
@@ -173,8 +175,9 @@
             '()
             (generate-orders shortfall))))
     (define (generate-orders shortfall)
-      (map (lambda (req) (plan-order req shortfall))
-           requirements))
+      (filter (lambda (order) (> (order-amount order) 0))
+              (map (lambda (req) (plan-order req shortfall))
+                   requirements)))
     (define (calculate-order-amount requirement amount)
       (let ((inventory-item (assq (requirement-item requirement)
                                   inventory)))
@@ -195,7 +198,10 @@
                       product))))
     ;; DISPTACH
     (define (dispatch msg)
-      (cond ((eq? msg 'product) product)
+      (cond ((< stock 0) 
+             (error "Stock cannot be less than zero -- MAKE-PRODUCER"))
+            ((eq? msg 'product) product)
+            ((eq? msg 'order-list) orders)
             ((eq? msg 'producer-stock) stock)
             ((eq? msg 'requirements) requirements)
             ((eq? msg 'inventory) inventory)
@@ -227,6 +233,8 @@
 
 (define (plan! producer economy)
   (let ((orders (producer 'plan-production)))
+    (newline)
+    (display (list 'plan-orders orders))
     ((economy 'distribute-orders!) orders)))
 
 ;; PLAN-DRIVERS
