@@ -384,6 +384,32 @@
                  (test-economy 'append-new-orders!)
                  (= (length (buildings 'order-list)) 0)))))))
 
+(define zero-orders-dont-affect-inventory-amount-ordered
+  (make-test
+    'zero-orders-dont-affect-inventory
+    (lambda ()
+      (let ((dynamo (make-test-power-grid))
+            (steelmill (make-test-steelmill))
+            (workforce (make-test-workforce))
+            (buildings (make-test-buildings))
+            (coalmine (make-test-coalmine))
+            (windmills (make-test-windmill-factory))
+            (test-order (make-order 'electricity 600 'steel)))
+        (let ((test-economy 
+                (make-economy (list dynamo steelmill workforce
+                                    buildings coalmine windmills) '())))
+          (begin (take-order! dynamo test-order)
+                 (let ((on-order-bldgs
+                         (check-producer-ordered-amount
+                           dynamo
+                           'buildings)))
+                   (plan! dynamo test-economy)
+                   (test-economy 'append-new-orders!)
+                   (= on-order-bldgs
+                      (check-producer-ordered-amount
+                        dynamo
+                        'buildings)))))))))
+
 ;; PUT YOUR TESTS HERE!
 
 (define tests-to-run
@@ -409,6 +435,7 @@
         test-plan-adjusts-amount-ordered
         test-plan-doesnt-order-whats-been-ordered
         zero-orders-not-delivered
+        zero-orders-dont-affect-inventory-amount-ordered
         ))
 
 (run-tests tests-to-run)

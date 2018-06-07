@@ -20,11 +20,17 @@
   (assq product inventory))
 
 (define (set-amount-ordered! item amount-ordered)
-  (set-car! (cddr item) amount-ordered))
+  (if (< amount-ordered 0)
+      (error "Amount ordered can't be < 0 -- SET-AMOUNT-ORDERED!")
+      (set-car! (cddr item) amount-ordered)))
 
 (define (subtract-inventory-item! item amount)
-  (set-car! (cdr item) (- (in-stock item) amount))
-  'done)
+  (let ((new-value (- (in-stock item) amount)))
+    (if (< new-value 0)
+        (error "New value less than 0 -- SUBTRACT-INVENTORY-ITEM!")
+        (begin 
+          (set-car! (cdr item) (- (in-stock item) amount))
+          'done))))
 
 (define (add-inventory-item! item amount)
   (set-car! (cddr item) (- (ordered item) amount))
@@ -178,11 +184,18 @@
       (let ((shortfall (- stock (amount-on-order-internal orders))))
         (if (<= shortfall 0)
             '()
-            (generate-orders shortfall))))
-    (define (generate-orders shortfall)
-      (filter (lambda (order) (> (order-amount order) 0))
-              (map (lambda (req) (plan-order req shortfall))
-                   requirements)))
+            (generate-orders shortfall requirements))))
+    (define (generate-orders shortfall required-items)
+      (if (null? required-items)
+          '()
+          (let ((first-req (car required-items))
+                (rest-reqs (cdr required-items)))
+            (let ((first-needed (calculate-order-amount 
+                                  first-req shortfall)))
+              (if (> first-needed 0)
+                  (cons (make-planned-order first-req first-needed)
+                        (generate-orders shortfall rest-reqs))
+                  (generate-orders shortfall rest-reqs))))))
     (define (calculate-order-amount requirement amount)
       (let ((inventory-item (assq (requirement-item requirement)
                                   inventory)))
@@ -190,16 +203,14 @@
               (amount-ordered (ordered inventory-item)))
           (- (* amount (requirement-amount requirement))
              (+ amount-in-stock amount-ordered)))))
-    (define (plan-order requirement amount)
-      (let ((amount-to-order (calculate-order-amount requirement amount))
-            (inventory-item (assq (requirement-item requirement) 
+    (define (make-planned-order requirement amount-needed)
+      (let ((inventory-item (assq (requirement-item requirement)
                                   inventory)))
         (begin
-          (set-amount-ordered! 
-            inventory-item 
-            (+ (ordered inventory-item) amount-to-order))
+          (set-amount-ordered! inventory-item
+                               (+ (ordered inventory-item) amount-needed))
           (make-order (requirement-item requirement)
-                      amount-to-order
+                      amount-needed
                       product))))
     ;; DISPTACH
     (define (dispatch msg)
