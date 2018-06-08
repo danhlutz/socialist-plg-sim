@@ -412,6 +412,9 @@
 
 ;; PLAN DRIVERS
 
+(define (make-test-driver)
+  (make-plan-driver 'healthcare-driver 'healthcare 20))
+
 (define plan-driver-takes-product-message
   (make-test
     'plan-driver-takes-product-message
@@ -420,16 +423,44 @@
               (make-plan-driver 'healthcare-driver 'healthcare 20)))
         (eq? (test-driver 'product) 'healthcare-driver)))))
 
-(define plan-driver-emits-orders
+(define plan-driver-can-make-order
   (make-test
-    'plan-driver-emits-orders
-    (fail-test "Run PLAN! on a plan-driver and watch it create orders")))
+    'plan-driver-can-make-order
+    (lambda ()
+      (let ((test-driver (make-test-driver)))
+        (let ((test-order (test-driver 'make-next-order)))
+          (and (eq? (order-product test-order) 'healthcare)
+               (= (order-amount test-order) 1)
+               (eq? (order-deliver-to test-order)
+                    'healthcare-driver)))))))
+
+(define plan-driver-emits-orders-on-plan!
+  (make-test
+    'plan-driver-emits-orders-on-plan!
+    (lambda ()
+      (let ((test-driver (make-test-driver))
+            (test-hospital (make-test-hospital)))
+        (let ((test-economy 
+                (make-economy (list test-hospital)
+                              (list test-driver))))
+          (begin (plan! test-driver test-economy)
+                 (test-economy 'append-new-orders!)
+                 (= (amount-on-order test-hospital) 1)))))))
 
 (define plan-driver-receives-shipments
   (make-test
     'plan-driver-receives-shipments
-    (fail-test "Receive shipment. increment current-target")))
-
+    (lambda ()
+      (let ((test-driver (make-test-driver))
+            (test-hospital (make-test-hospital)))
+        (let ((test-economy
+                (make-economy (list test-hospital) (list test-driver))))
+          (begin (plan! test-driver test-economy)
+                 (test-economy 'append-new-orders!)
+                 (eq? (test-driver 'send-orders?) #f)
+                 (fulfil-orders! test-hospital test-economy)
+                 (and (eq? (test-driver 'send-orders?) #t)
+                      (= (test-driver 'current-target) 2))))))))
 
 ;; PUT YOUR TESTS HERE!
 
@@ -459,7 +490,8 @@
         zero-orders-dont-affect-inventory-amount-ordered
         ;; PLAN DRIVER TESTS
         plan-driver-takes-product-message
-        plan-driver-emits-orders
+        plan-driver-can-make-order
+        plan-driver-emits-orders-on-plan!
         plan-driver-receives-shipments
         ))
 

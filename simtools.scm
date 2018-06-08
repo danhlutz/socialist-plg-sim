@@ -254,20 +254,35 @@
 ;; PLAN-DRIVERS
 
 (define (make-plan-driver name consumes target)
-  (let ((current-target 1))
-    ;; ADD LETS 
-    ;; --> flag: true if ready to create new order. 
-    ;;           set to true after shipment received
-
-    ;; need procedures to 
-    ;; PLAN --> create orders
+  (let ((current-target 1)
+        (send-orders? #t))
+    (define (make-next-order)
+      (make-order consumes current-target name))
+    ;; PLAN-PRODUCTION!
+    (define (plan-production-internal!)
+      (if send-orders?
+          (begin (set! send-orders? #f)
+                 (list (make-next-order)))
+          '()))
     ;; RECEIVE SHIPMENTS and reset flag adjust current-target
-
+    (define (set-new-target)
+      (if (< current-target target)
+          (set! current-target (+ 1 current-target))
+          (set! current-target target)))
+    (define (receive-shipment-internal! shipment)
+      (begin (set! send-orders? #t)
+             (set-new-target)))
     ;; DISPATCH
     (define (dispatch msg)
       (cond ((eq? msg 'product) name)
+            ((eq? msg 'make-next-order) (make-next-order))
+            ((eq? msg 'plan-production) (plan-production-internal!))
+            ((eq? msg 'add-new-orders!) 'i-take-orders-from-no-one)
+            ((eq? msg 'send-orders?) send-orders?)
+            ((eq? msg 'receive-shipment!) receive-shipment-internal!)
+            ((eq? msg 'current-target) current-target)
             (else 
-              (error "Undefined msg -- MAKE-PLAN-DRIVER"))))
+              (error "Undefined msg -- MAKE-PLAN-DRIVER" msg))))
     dispatch))
 
 ;; define a plan-driver that can make and receive orders
