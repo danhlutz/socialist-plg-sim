@@ -410,6 +410,27 @@
                         dynamo
                         'buildings)))))))))
 
+;; PLAN DRIVERS
+
+(define plan-driver-takes-product-message
+  (make-test
+    'plan-driver-takes-product-message
+    (lambda ()
+      (let ((test-driver 
+              (make-plan-driver 'healthcare-driver 'healthcare 20)))
+        (eq? (test-driver 'product) 'healthcare-driver)))))
+
+(define plan-driver-emits-orders
+  (make-test
+    'plan-driver-emits-orders
+    (fail-test "Run PLAN! on a plan-driver and watch it create orders")))
+
+(define plan-driver-receives-shipments
+  (make-test
+    'plan-driver-receives-shipments
+    (fail-test "Receive shipment. increment current-target")))
+
+
 ;; PUT YOUR TESTS HERE!
 
 (define tests-to-run
@@ -436,6 +457,10 @@
         test-plan-doesnt-order-whats-been-ordered
         zero-orders-not-delivered
         zero-orders-dont-affect-inventory-amount-ordered
+        ;; PLAN DRIVER TESTS
+        plan-driver-takes-product-message
+        plan-driver-emits-orders
+        plan-driver-receives-shipments
         ))
 
 (run-tests tests-to-run)

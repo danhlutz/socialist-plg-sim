@@ -253,6 +253,23 @@
 
 ;; PLAN-DRIVERS
 
+(define (make-plan-driver name consumes target)
+  (let ((current-target 1))
+    ;; ADD LETS 
+    ;; --> flag: true if ready to create new order. 
+    ;;           set to true after shipment received
+
+    ;; need procedures to 
+    ;; PLAN --> create orders
+    ;; RECEIVE SHIPMENTS and reset flag adjust current-target
+
+    ;; DISPATCH
+    (define (dispatch msg)
+      (cond ((eq? msg 'product) name)
+            (else 
+              (error "Undefined msg -- MAKE-PLAN-DRIVER"))))
+    dispatch))
+
 ;; define a plan-driver that can make and receive orders
 ;; make-plan-driver takes a product and a target function
 
@@ -302,8 +319,6 @@
     dispatch))
 
 ;; TO DO 
-;; --> make an economy method
-;; that handles production, orders, and reporting for producers
 
 ;; THE SIMULATION
 ;; simulate steps
