@@ -329,6 +329,7 @@
       (cond ((eq? msg 'distribute-shipments) distribute-shipments-internal)
             ((eq? msg 'distribute-orders!) distribute-orders-internal!)
             ((eq? msg 'append-new-orders!) (append-new-orders-internal!))
+            ((eq? msg 'producers) producer-list)
             (else 
               (error "Undefined message -- MAKE-ECONOMY" msg))))
     dispatch))
@@ -341,3 +342,14 @@
 ;; --> fulfil orders
 ;; --> plan-and-order
 ;; --> report 
+
+(define (sim-step! economy step)
+  (let ((producers (economy 'producers)))
+    ;; GET ALL UNITS LATER -- will need to map out just the units
+    (begin
+      (map (lambda (producer) (producer 'produce)) producers)
+      ;; TODO
+      ;; fulfile orders
+      ;; plan-and-order
+      ;; report
+      'done)))

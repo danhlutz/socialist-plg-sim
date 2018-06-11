@@ -462,6 +462,61 @@
                  (and (eq? (test-driver 'send-orders?) #t)
                       (= (test-driver 'current-target) 2))))))))
 
+;; SIMULATION TESTS
+
+(define (make-abc-producers)
+  (list
+    (make-producer 'a
+                   20
+                   (list (make-inventory-entry 'b 0 0)
+                         (make-inventory-entry 'c 0 0))
+                   '((b 0.7) (c 0.9)))
+    (make-producer 'b 10
+                   (list (make-inventory-entry 'a 0 0)
+                         (make-inventory-entry 'c 0 0))
+                   '((a 0.3) (c 0.5)))
+    (make-producer 'c 0
+                   (list (make-inventory-entry 'a 2 0)
+                         (make-inventory-entry 'b 1 0))
+                   '((a 0.1) (b 0.1)))))
+
+(define (make-c-driver)
+  (make-plan-driver 'c-driver 'c 20))
+
+(define (make-abc-economy) 
+  (make-economy (make-abc-producers) (list (make-c-driver))))
+
+(define sim-step-produces
+  (make-test
+    'sim-step-produces
+    (lambda ()
+      (let ((test-economy (make-abc-economy)))
+        (let ((c (caddr (test-economy 'producers))))
+          (begin (sim-step! test-economy 0)
+                 (and (= (producer-stock c) 10)
+                      (= (check-producer-stock c 'a) 1)
+                      (= (check-producer-stock c 'b) 0))))))))
+
+(define sim-step-fulfils-orders
+  (make-test
+    'sim-step-fulfils-orders
+    (fail-test "Write fulfilment")))
+
+(define sim-step-plans-and-orders
+  (make-test
+    'sim-step-plans-and-orders
+    (fail-test "Write plan and order -- and don't forget to append")))
+
+(define sim-step-plan-driver-creates-orders
+  (make-test
+    'sim-step-plan-driver-creates-orders
+    (fail-test "Make sure plan driver gets called during planning!")))
+
+(define sim-step-reports
+  (make-test
+    'sim-step-reports
+    (fail-test "Save the report of each producer and print if desired")))
+
 ;; PUT YOUR TESTS HERE!
 
 (define tests-to-run
@@ -493,6 +548,12 @@
         plan-driver-can-make-order
         plan-driver-emits-orders-on-plan!
         plan-driver-receives-shipments
+        ;; SIMULATION STEPS
+        sim-step-produces
+        sim-step-fulfils-orders
+        sim-step-plans-and-orders
+        sim-step-plan-driver-creates-orders
+        sim-step-reports
         ))
 
 (run-tests tests-to-run)
