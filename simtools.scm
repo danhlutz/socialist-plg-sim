@@ -180,9 +180,13 @@
                (cons shipment
                      (make-shipments-internal rest)))))
     ;; PLAN
+    (define (calc-amount-needed)
+      (if (< (amount-on-order-internal orders) stock)
+          0
+          (- (amount-on-order-internal orders) stock)))
     (define (plan-production-internal)
-      (let ((shortfall (- stock (amount-on-order-internal orders))))
-        (if (<= shortfall 0)
+      (let ((shortfall (calc-amount-needed)))
+        (if (= shortfall 0)
             '()
             (generate-orders shortfall requirements))))
     (define (generate-orders shortfall required-items)
@@ -302,6 +306,8 @@
     ;; LOOKUP-PRODUCER
     (define (lookup-producer product)
       (unit-producer (assq product units)))
+    (define (get-units)
+      (map (lambda (x) (unit-producer x)) units))
     ;; APPEND NEW ORDERS
     (define (append-new-orders-internal!)
       (begin (map (lambda (unit) ((unit-producer unit) 'add-new-orders!)) 
@@ -330,6 +336,7 @@
             ((eq? msg 'distribute-orders!) distribute-orders-internal!)
             ((eq? msg 'append-new-orders!) (append-new-orders-internal!))
             ((eq? msg 'producers) producer-list)
+            ((eq? msg 'units) (get-units))
             (else 
               (error "Undefined message -- MAKE-ECONOMY" msg))))
     dispatch))
@@ -344,10 +351,16 @@
 ;; --> report 
 
 (define (sim-step! economy step)
-  (let ((producers (economy 'producers)))
+  (let ((producers (economy 'producers))
+        (units (economy 'units)))
     ;; GET ALL UNITS LATER -- will need to map out just the units
     (begin
+      ;; PRODUCE
       (map (lambda (producer) (producer 'produce)) producers)
+      ;; PLAN!
+      (map (lambda (unit) (plan! unit economy)) units)
+      ;; APPEND NEW ORDERS
+      (economy 'append-new-orders!)
       ;; TODO
       ;; fulfile orders
       ;; plan-and-order

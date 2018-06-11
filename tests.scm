@@ -317,6 +317,7 @@
                 (make-economy (list dynamo steelmill workforce
                                     buildings coalmine windmills) '())))
           (begin (take-order! dynamo test-order)
+                 (test-economy 'append-new-orders!)
                  (plan! dynamo test-economy)
                  (test-economy 'append-new-orders!)
                  (and (= (amount-on-order workforce) 30.0)
@@ -337,7 +338,9 @@
                 (make-economy (list dynamo steelmill workforce
                                     buildings coalmine windmills) '())))
           (begin (take-order! dynamo test-order)
+                 (test-economy 'append-new-orders!)
                  (plan! dynamo test-economy)
+                 (test-economy 'append-new-orders!)
                  (and (= (check-producer-ordered-amount
                            dynamo 'workers) 
                          30.0)
@@ -359,6 +362,7 @@
                 (make-economy (list dynamo steelmill workforce
                                     buildings coalmine windmills) '())))
           (begin (take-order! dynamo test-order)
+                 (test-economy 'append-new-orders!)
                  (plan! dynamo test-economy)
                  (test-economy 'append-new-orders!)
                  (and (= (check-producer-ordered-amount dynamo 'windmills)
@@ -481,7 +485,7 @@
                    '((a 0.1) (b 0.1)))))
 
 (define (make-c-driver)
-  (make-plan-driver 'c-driver 'c 20))
+  (make-plan-driver 'a-driver 'a 20))
 
 (define (make-abc-economy) 
   (make-economy (make-abc-producers) (list (make-c-driver))))
@@ -505,12 +509,18 @@
 (define sim-step-plans-and-orders
   (make-test
     'sim-step-plans-and-orders
-    (fail-test "Write plan and order -- and don't forget to append")))
+    (fail-test "Make sure plans are made, orders ordered")))
 
 (define sim-step-plan-driver-creates-orders
   (make-test
     'sim-step-plan-driver-creates-orders
-    (fail-test "Make sure plan driver gets called during planning!")))
+    (lambda ()
+      (let ((test-economy (make-abc-economy)))
+        (let ((a (car (test-economy 'producers)))
+              (b (cadr (test-economy 'producers)))
+              (c (caddr (test-economy 'producers))))
+          (begin (sim-step! test-economy 0)
+                 (= (amount-on-order a) 1)))))))
 
 (define sim-step-reports
   (make-test
