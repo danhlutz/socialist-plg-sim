@@ -180,12 +180,10 @@
                (cons shipment
                      (make-shipments-internal rest)))))
     ;; PLAN
-    (define (calc-amount-needed)
-      (if (< (amount-on-order-internal orders) stock)
-          0
-          (- (amount-on-order-internal orders) stock)))
+    (define (calc-shortfall)
+      (max 0 (- (amount-on-order-internal orders) stock)))
     (define (plan-production-internal)
-      (let ((shortfall (calc-amount-needed)))
+      (let ((shortfall (calc-shortfall)))
         (if (= shortfall 0)
             '()
             (generate-orders shortfall requirements))))
