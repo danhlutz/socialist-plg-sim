@@ -259,13 +259,13 @@
 
 (define (make-plan-driver name consumes target)
   (let ((current-target 1)
-        (send-orders? #t))
+        (orders-sent 0))
     (define (make-next-order)
       (make-order consumes current-target name))
     ;; PLAN-PRODUCTION!
     (define (plan-production-internal!)
-      (if send-orders?
-          (begin (set! send-orders? #f)
+      (if (= orders-sent 0)
+          (begin (set! orders-sent (+ 1 orders-sent))
                  (list (make-next-order)))
           '()))
     ;; RECEIVE SHIPMENTS and reset flag adjust current-target
@@ -274,7 +274,7 @@
           (set! current-target (+ 1 current-target))
           (set! current-target target)))
     (define (receive-shipment-internal! shipment)
-      (begin (set! send-orders? #t)
+      (begin (set! orders-sent (- orders-sent 1))
              (set-new-target)))
     ;; DISPATCH
     (define (dispatch msg)
@@ -282,7 +282,7 @@
             ((eq? msg 'make-next-order) (make-next-order))
             ((eq? msg 'plan-production) (plan-production-internal!))
             ((eq? msg 'add-new-orders!) 'i-take-orders-from-no-one)
-            ((eq? msg 'send-orders?) send-orders?)
+            ((eq? msg 'send-orders?) orders-sent)
             ((eq? msg 'receive-shipment!) receive-shipment-internal!)
             ((eq? msg 'current-target) current-target)
             (else 

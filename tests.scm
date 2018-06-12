@@ -461,9 +461,9 @@
                 (make-economy (list test-hospital) (list test-driver))))
           (begin (plan! test-driver test-economy)
                  (test-economy 'append-new-orders!)
-                 (eq? (test-driver 'send-orders?) #f)
+                 (eq? (test-driver 'send-orders?) 1)
                  (fulfil-orders! test-hospital test-economy)
-                 (and (eq? (test-driver 'send-orders?) #t)
+                 (and (eq? (test-driver 'send-orders?) 0)
                       (= (test-driver 'current-target) 2))))))))
 
 ;; SIMULATION TESTS
