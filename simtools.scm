@@ -25,7 +25,7 @@
       (set-car! (cddr item) amount-ordered)))
 
 (define (subtract-inventory-item! item amount)
-  (let ((new-value (- (in-stock item) amount)))
+  (let ((new-value (max 0 (- (in-stock item) amount))))
     (if (< new-value 0)
         (error "New value less than 0 -- SUBTRACT-INVENTORY-ITEM!")
         (begin 
@@ -367,3 +367,11 @@
       ;; TODO
       ;; report
       'done)))
+
+(define (simulate-til economy steps)
+  (define (iter economy steps counter)
+    (if (> counter steps)
+        economy
+        (begin (sim-step! economy counter)
+               (iter economy steps (+ 1 counter)))))
+  (iter economy steps 0))

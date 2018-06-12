@@ -478,7 +478,7 @@
     (make-producer 'b 10
                    (list (make-inventory-entry 'c 0 0)
                          (make-inventory-entry 'd 0 0))
-                   '((c 0.3) (d 0.5)))
+                   '((c 0.1) (d 0.2)))
     (make-producer 'c 5
                    (list (make-inventory-entry 'b 2 0)
                          (make-inventory-entry 'd 1 0))
