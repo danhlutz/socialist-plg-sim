@@ -33,7 +33,9 @@
           'done))))
 
 (define (add-inventory-item! item amount)
-  (set-car! (cddr item) (- (ordered item) amount))
+  (define (calc-new-inv-amount)
+    (max 0 (- (ordered item) amount)))
+  (set-amount-ordered! item (calc-new-inv-amount))
   (set-car! (cdr item) (+ (in-stock item) amount))
   'done)
 
@@ -355,12 +357,13 @@
     (begin
       ;; PRODUCE
       (map (lambda (producer) (producer 'produce)) producers)
+      ;; FULFIL ORDERS
+      (map (lambda (producer) (fulfil-orders! producer economy))
+           producers)
       ;; PLAN!
       (map (lambda (unit) (plan! unit economy)) units)
       ;; APPEND NEW ORDERS
       (economy 'append-new-orders!)
       ;; TODO
-      ;; fulfile orders
-      ;; plan-and-order
       ;; report
       'done)))

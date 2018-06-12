@@ -471,24 +471,28 @@
 (define (make-abc-producers)
   (list
     (make-producer 'a
-                   20
+                   1
                    (list (make-inventory-entry 'b 0 0)
                          (make-inventory-entry 'c 0 0))
                    '((b 0.7) (c 0.9)))
     (make-producer 'b 10
-                   (list (make-inventory-entry 'a 0 0)
+                   (list (make-inventory-entry 'c 0 0)
+                         (make-inventory-entry 'd 0 0))
+                   '((c 0.3) (d 0.5)))
+    (make-producer 'c 5
+                   (list (make-inventory-entry 'b 2 0)
+                         (make-inventory-entry 'd 1 0))
+                   '((b 0.1) (d 0.1)))
+    (make-producer 'd 5
+                   (list (make-inventory-entry 'b 0 0)
                          (make-inventory-entry 'c 0 0))
-                   '((a 0.3) (c 0.5)))
-    (make-producer 'c 0
-                   (list (make-inventory-entry 'a 2 0)
-                         (make-inventory-entry 'b 1 0))
-                   '((a 0.1) (b 0.1)))))
+                   '((b 0.03) (c 0.02)))))
 
-(define (make-c-driver)
+(define (make-a-driver)
   (make-plan-driver 'a-driver 'a 20))
 
 (define (make-abc-economy) 
-  (make-economy (make-abc-producers) (list (make-c-driver))))
+  (make-economy (make-abc-producers) (list (make-a-driver))))
 
 (define sim-step-produces
   (make-test
@@ -497,19 +501,44 @@
       (let ((test-economy (make-abc-economy)))
         (let ((c (caddr (test-economy 'producers))))
           (begin (sim-step! test-economy 0)
-                 (and (= (producer-stock c) 10)
-                      (= (check-producer-stock c 'a) 1)
-                      (= (check-producer-stock c 'b) 0))))))))
+                 (and (= (producer-stock c) 15)
+                      (= (check-producer-stock c 'b) 1)
+                      (= (check-producer-stock c 'd) 0))))))))
 
 (define sim-step-fulfils-orders
   (make-test
     'sim-step-fulfils-orders
-    (fail-test "Write fulfilment")))
+    (lambda ()
+      (let ((test-economy (make-abc-economy)))
+        (let ((a (car (test-economy 'producers))))
+          (begin (sim-step! test-economy 0)
+                 (sim-step! test-economy 1)
+                 (= (producer-stock a) 0)))))))
 
 (define sim-step-plans-and-orders
   (make-test
     'sim-step-plans-and-orders
-    (fail-test "Make sure plans are made, orders ordered")))
+    (lambda ()
+      (let ((test-economy (make-abc-economy)))
+        (let ((a (car (test-economy 'producers)))
+              (b (cadr (test-economy 'producers)))
+              (c (caddr (test-economy 'producers))))
+          (begin (sim-step! test-economy 0)
+                 (sim-step! test-economy 1)
+                 (sim-step! test-economy 2)
+                 (sim-step! test-economy 3)
+                 (sim-step! test-economy 4)
+                 (sim-step! test-economy 5)
+                 (sim-step! test-economy 6)
+                 (newline)
+                 (display (list 'a-history (a 'history)))
+                 (newline)
+                 (display (list 'b-history (b 'history)))
+                 (newline)
+                 (display (list 'c-history (c 'history)))
+                 (and (> (amount-on-order a) 0)
+                      (> (amount-on-order b) 0)
+                      (> (amount-on-order c) 0))))))))
 
 (define sim-step-plan-driver-creates-orders
   (make-test
