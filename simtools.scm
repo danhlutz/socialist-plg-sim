@@ -109,6 +109,28 @@
 (define (take-order! producer order)
   ((producer 'take-order!) order))
 
+(define (sort-orders orders)
+  (if (< (length orders) 2)
+      orders
+      (sort-by-pivot orders)))
+
+(define (sort-by-pivot orders)
+  (let ((pivot (car orders))
+        (rest (cdr orders)))
+    (let ((split-orders (split rest pivot '() '())))
+      (let ((smaller (car split-orders))
+            (greater (cadr split-orders)))
+        (append (sort-orders smaller)
+                (cons pivot (sort-orders greater)))))))
+
+(define (split orders pivot smaller greater)
+  (cond ((null? orders)
+         (list smaller greater))
+        ((< (order-amount (car orders)) (order-amount pivot))
+         (split (cdr orders) pivot (cons (car orders) smaller) greater))
+        (else
+          (split (cdr orders) pivot smaller (cons (car orders) greater)))))
+
 ;; SHIPMENTS
 
 (define (make-shipment product amount to)
@@ -124,7 +146,7 @@
 ;; PRODUCERS
 
 (define (make-producer product stock inventory requirements)
-  (let ((history '())
+  (let ((history '(*init*))
         (orders '())
         (new-orders '()))
     ;; PRODUCE
@@ -152,7 +174,7 @@
       (set! new-orders (cons order new-orders))
       'order-taken)
     (define (add-new-orders!)
-      (set! orders (append orders new-orders))
+      (set! orders (sort-orders (append orders new-orders)))
       (set! new-orders '())
       'orders-appended)
     (define (amount-on-order-internal items)
@@ -166,21 +188,22 @@
           (add-inventory-item! 
             inventory-item (shipment-amount shipment))
           'done)))
-    (define (make-shipments-internal order-list)
-      (if (null? order-list)
+    (define (make-shipments-internal2)
+      (if (null? orders)
           '()
-          (let ((first-order (car order-list))
-                (rest-orders (cdr order-list)))
+          (let ((first-order (car orders)))
             (if (<= (order-amount first-order) stock)
-                (ship-and-process first-order rest-orders)
-                (make-shipments-internal rest-orders)))))
-    (define (ship-and-process first rest)
-      (let ((shipment (make-shipment product
-                                     (order-amount first)
-                                     (order-deliver-to first))))
-        (begin (set! stock (- stock (order-amount first)))
-               (cons shipment
-                     (make-shipments-internal rest)))))
+                (ship-and-process2 first-order)
+                '()))))
+    (define (ship-and-process2 order)
+      (let ((rest-orders (cdr orders))
+            (new-stock (- stock (order-amount order)))
+            (shipment (make-shipment product
+                                     (order-amount order)
+                                     (order-deliver-to order))))
+        (begin (set! stock new-stock)
+               (set! orders rest-orders)
+               (cons shipment (make-shipments-internal2)))))
     ;; PLAN
     (define (calc-shortfall)
       (max 0 (- (amount-on-order-internal orders) stock)))
@@ -233,7 +256,7 @@
             ((eq? msg 'amount-on-order)
              (amount-on-order-internal orders))
             ((eq? msg 'receive-shipment!) receive-shipment-internal!)
-            ((eq? msg 'make-shipments) (make-shipments-internal orders))
+            ((eq? msg 'make-shipments) (make-shipments-internal2))
             ((eq? msg 'plan-production) (plan-production-internal))
             (else (error "Undefined message -- MAKE-PRODUCER" msg))))
     dispatch))
@@ -337,18 +360,12 @@
             ((eq? msg 'append-new-orders!) (append-new-orders-internal!))
             ((eq? msg 'producers) producer-list)
             ((eq? msg 'units) (get-units))
+            ((eq? msg 'units-with-names) units)
             (else 
               (error "Undefined message -- MAKE-ECONOMY" msg))))
     dispatch))
 
-;; TO DO 
-
 ;; THE SIMULATION
-;; simulate steps
-;; --> produce 
-;; --> fulfil orders
-;; --> plan-and-order
-;; --> report 
 
 (define (sim-step! economy step)
   (let ((producers (economy 'producers))
@@ -375,3 +392,10 @@
         (begin (sim-step! economy counter)
                (iter economy steps (+ 1 counter)))))
   (iter economy steps 0))
+
+(define (get-producer name economy)
+  (let ((units (economy 'units-with-names)))
+    (unit-producer (assq name units))))
+
+(define (last-report producer)
+  (car (producer 'history)))

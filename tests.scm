@@ -302,6 +302,31 @@
                       (= (check-producer-stock steelmill 'electricity)
                          232))))))))
 
+(define fulfilment-removes-completed-orders
+  (make-test
+    'fulfilment-removes-completed-orders
+    (lambda ()
+      (let ((dynamo (make-test-power-grid))
+            (steelmill (make-test-steelmill))
+            (order1 (make-order 'electricity 301 'steel))
+            (order2 (make-order 'electricity 290 'steel))
+            (order3 (make-order 'electricity 301 'steel)))
+        (let ((test-economy (make-economy (list dynamo steelmill) '())))
+          (begin (take-order! dynamo order1)
+                 (take-order! dynamo order2)
+                 (take-order! dynamo order3)
+                 (dynamo 'add-new-orders!)
+                 (fulfil-orders! dynamo test-economy)
+                 (newline)
+                 (display "fulfilment removes orders test")
+                 (newline)
+                 (display (list 'orders (dynamo 'order-list)))
+                 (newline)
+                 (display (list 'amount-on-order
+                                (amount-on-order dynamo)))
+                 (and (= (length (dynamo 'order-list)) 2)
+                      (= (amount-on-order dynamo) 602))))))))
+
 (define test-plan-creates-orders
   (make-test
     'test-plan-creates-orders
@@ -474,16 +499,16 @@
                    1
                    (list (make-inventory-entry 'b 0 0)
                          (make-inventory-entry 'c 0 0))
-                   '((b 0.7) (c 0.9)))
-    (make-producer 'b 10
+                   '((b 0.01) (c 0.02)))
+    (make-producer 'b 1 
                    (list (make-inventory-entry 'c 0 0)
                          (make-inventory-entry 'd 0 0))
                    '((c 0.1) (d 0.2)))
-    (make-producer 'c 5
+    (make-producer 'c 1
                    (list (make-inventory-entry 'b 2 0)
                          (make-inventory-entry 'd 1 0))
                    '((b 0.1) (d 0.1)))
-    (make-producer 'd 5
+    (make-producer 'd 1
                    (list (make-inventory-entry 'b 0 0)
                          (make-inventory-entry 'c 0 0))
                    '((b 0.03) (c 0.02)))))
@@ -551,10 +576,22 @@
           (begin (sim-step! test-economy 0)
                  (= (amount-on-order a) 1)))))))
 
-(define sim-step-reports
+;; ORDER SORT
+
+(define sort-orders-test
   (make-test
-    'sim-step-reports
-    (fail-test "Save the report of each producer and print if desired")))
+    'sort-orders
+    (lambda ()
+      (let ((order1 (make-order 'a 75 'b))
+            (order2 (make-order 'a 1003 'c))
+            (order3 (make-order 'a -14 'd)))
+        (let ((orders (list order1 order2 order3)))
+          (let ((so (sort-orders orders)))
+            (let ((l1 (car so))
+                  (l2 (cadr so))
+                  (l3 (caddr so)))
+            (and (<= (order-amount l1) (order-amount l2))
+                 (<= (order-amount l2) (order-amount l3))))))))))
 
 ;; PUT YOUR TESTS HERE!
 
@@ -577,6 +614,7 @@
         shipment-reduces-ordered-amount
         negative-order-sends-signal
         test-order-fulfilment
+        fulfilment-removes-completed-orders
         test-plan-creates-orders
         test-plan-adjusts-amount-ordered
         test-plan-doesnt-order-whats-been-ordered
@@ -590,9 +628,9 @@
         ;; SIMULATION STEPS
         sim-step-produces
         sim-step-fulfils-orders
-        sim-step-plans-and-orders
+        ;sim-step-plans-and-orders
         sim-step-plan-driver-creates-orders
-        sim-step-reports
+        sort-orders-test
         ))
 
 (run-tests tests-to-run)
