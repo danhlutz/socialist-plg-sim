@@ -41,6 +41,10 @@
     (newline)
     #f))
 
+(define (in-tolerance? a b)
+  (let ((tolerance 0.1))
+    (< (abs (- a b)) tolerance)))
+
 ;; INVENTORY TESTS
 
 (define inventory-test-1
@@ -317,13 +321,6 @@
                  (take-order! dynamo order3)
                  (dynamo 'add-new-orders!)
                  (fulfil-orders! dynamo test-economy)
-                 (newline)
-                 (display "fulfilment removes orders test")
-                 (newline)
-                 (display (list 'orders (dynamo 'order-list)))
-                 (newline)
-                 (display (list 'amount-on-order
-                                (amount-on-order dynamo)))
                  (and (= (length (dynamo 'order-list)) 2)
                       (= (amount-on-order dynamo) 602))))))))
 
@@ -345,8 +342,9 @@
                  (test-economy 'append-new-orders!)
                  (plan! dynamo test-economy)
                  (test-economy 'append-new-orders!)
-                 (and (= (amount-on-order workforce) 30.0)
-                      (= (amount-on-order coalmine) 2.0))))))))
+                 (and (in-tolerance? (amount-on-order workforce) 30.1)
+                      (in-tolerance? (amount-on-order coalmine) 
+                                     2.01))))))))
 
 (define test-plan-adjusts-amount-ordered
   (make-test
@@ -366,11 +364,13 @@
                  (test-economy 'append-new-orders!)
                  (plan! dynamo test-economy)
                  (test-economy 'append-new-orders!)
-                 (and (= (check-producer-ordered-amount
+                 (and (in-tolerance? 
+                        (check-producer-ordered-amount
                            dynamo 'workers) 
-                         30.0)
-                      (= (check-producer-ordered-amount
-                           dynamo 'coal) 2.0))))))))
+                         30.1)
+                      (in-tolerance? 
+                        (check-producer-ordered-amount
+                           dynamo 'coal) 2.01))))))))
 
 (define test-plan-doesnt-order-whats-been-ordered
   (make-test
@@ -390,9 +390,11 @@
                  (test-economy 'append-new-orders!)
                  (plan! dynamo test-economy)
                  (test-economy 'append-new-orders!)
-                 (and (= (check-producer-ordered-amount dynamo 'windmills)
-                         30.0)
-                      (= (amount-on-order windmills) 29.0))))))))
+                 (and (in-tolerance? 
+                        (check-producer-ordered-amount dynamo 'windmills)
+                        30.1)
+                      (in-tolerance?
+                        (amount-on-order windmills) 29.1))))))))
 
 (define zero-orders-not-delivered
   (make-test
@@ -530,7 +532,7 @@
       (let ((test-economy (make-abc-economy)))
         (let ((c (caddr (test-economy 'producers))))
           (begin (sim-step! test-economy 0)
-                 (and (= (producer-stock c) 15)
+                 (and (= (producer-stock c) 11)
                       (= (check-producer-stock c 'b) 1)
                       (= (check-producer-stock c 'd) 0))))))))
 
@@ -559,12 +561,6 @@
                  (sim-step! test-economy 4)
                  (sim-step! test-economy 5)
                  (sim-step! test-economy 6)
-                 (newline)
-                 (display (list 'a-history (a 'history)))
-                 (newline)
-                 (display (list 'b-history (b 'history)))
-                 (newline)
-                 (display (list 'c-history (c 'history)))
                  (and (> (amount-on-order a) 0)
                       (> (amount-on-order b) 0)
                       (> (amount-on-order c) 0))))))))

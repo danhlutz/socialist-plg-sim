@@ -211,7 +211,7 @@
       (let ((shortfall (calc-shortfall)))
         (if (= shortfall 0)
             '()
-            (generate-orders (+ 1.1 shortfall) requirements))))
+            (generate-orders (+ 1 shortfall) requirements))))
     (define (generate-orders shortfall required-items)
       (if (null? required-items)
           '()
