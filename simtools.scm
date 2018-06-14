@@ -417,6 +417,17 @@
   (let ((a (get-producer 'a economy)))
     (stride (get-first-target (a 'history)))))
 
+(define (last-time-target-hit economy)
+  (define (count-til-zero records)
+    (cond ((null? records) 0)
+          ((> (car records) 0) 0)
+          (else (+ 1 (count-til-zero (cdr records))))))
+  (let ((a-history ((get-producer 'a economy) 'history)))
+    (count-til-zero a-history)))
+
+(define (blocked? economy)
+  (> (last-time-target-hit economy) (+ 1 (plan-stride economy))))
+
 (define (display-result economy counter period)
   (newline)
   (display "[")
@@ -426,13 +437,12 @@
   (display (target-status economy))
   (display " | STRIDE: ")
   (display (plan-stride economy))
-  (display " | AVG: ")
-  (display (* 1.0 (/ (target-status economy) 
-                     (plan-stride economy)))))
+  (display " | BLOCKED: ")
+  (display (blocked? economy)))
 
 (define (run-n-times economy period n)
   (define (iter economy period counter)
-    (if (> counter n)
+    (if (>= counter n)
         'done-planning
         (begin
           (simulate-til economy period)
