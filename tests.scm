@@ -519,6 +519,10 @@
 (define (make-abc-economy) 
   (make-economy (make-abc-producers) (list (make-a-driver))))
 
+(define (make-big-plan-economy big-target)
+  (make-economy (make-abc-producers)
+                (list (make-plan-driver 'a-driver 'a big-target))))
+
 (define sim-step-produces
   (make-test
     'sim-step-produces
