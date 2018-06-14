@@ -499,7 +499,7 @@
                    1
                    (list (make-inventory-entry 'b 0 0)
                          (make-inventory-entry 'c 0 0))
-                   '((b 0.01) (c 0.02)))
+                   '((b 0.9) (c 0.7)))
     (make-producer 'b 1 
                    (list (make-inventory-entry 'c 0 0)
                          (make-inventory-entry 'd 0 0))
