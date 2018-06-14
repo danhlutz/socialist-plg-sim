@@ -361,6 +361,7 @@
             ((eq? msg 'producers) producer-list)
             ((eq? msg 'units) (get-units))
             ((eq? msg 'units-with-names) units)
+            ((eq? msg 'driver) (car plan-driver-list))
             (else 
               (error "Undefined message -- MAKE-ECONOMY" msg))))
     dispatch))
@@ -399,3 +400,19 @@
 
 (define (last-report producer)
   (car (producer 'history)))
+
+(define (target-status economy)
+  (let ((driver (economy 'driver)))
+    (driver 'current-target)))
+
+(define (plan-stride economy)
+  (define (get-first-target history)
+    (cond ((null? history) '())
+          ((= (car history) 0) (get-first-target (cdr history)))
+          (else (cdr history))))
+  (define (stride history)
+    (cond ((null? history) '*no-stride*)
+          ((= (car history) 0) (+ 1 (stride (cdr history))))
+          (else 1)))
+  (let ((a (get-producer 'a economy)))
+    (stride (get-first-target (a 'history)))))
