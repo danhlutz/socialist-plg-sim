@@ -425,7 +425,10 @@
   (display "CURRENT-TARGET: ")
   (display (target-status economy))
   (display " | STRIDE: ")
-  (display (plan-stride economy)))
+  (display (plan-stride economy))
+  (display " | AVG: ")
+  (display (* 1.0 (/ (target-status economy) 
+                     (plan-stride economy)))))
 
 (define (run-n-times economy period n)
   (define (iter economy period counter)
