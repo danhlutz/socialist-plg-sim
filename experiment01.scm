@@ -25,19 +25,21 @@
                      '((b 0.03) (c 0.02))))
     (list (make-plan-driver 'a-driver 'a 1000000))))
 
-(define test-econ (make-4-prod))
-
 (define (run-exp1)
-  (begin
-    (newline)
-    (display "Running 4-chain economy 10,000 steps 25 times")
-    (run-n-times test-econ 10000 25)))
+  (let ((test-econ (make-4-prod)))
+    (begin
+      (newline)
+      (display "Running 4-chain economy 10,000 steps 25 times")
+      (run-n-times test-econ 10000 25))))
 
 ;; RESULT
 ;; running this test shows too things:
 ;;
-;; 1) the plan target attained rises ALMOST linearly over time
+;; 1) the plan target attained rises ALMOST linearly over time.
+;;    the plan target is approximately equal to
 ;;
-;; 2) the stride increases very slowly, probably related to ln(x).
+;;        target ~ 0.883 * t / ln(t)
+;;
+;; 2) the stride increases very slowly.
 ;;    this implies that even though the plan target keeps rising, over
 ;;    time it slows down, almost imperceptibly
