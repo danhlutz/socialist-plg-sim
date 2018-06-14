@@ -416,3 +416,23 @@
           (else 1)))
   (let ((a (get-producer 'a economy)))
     (stride (get-first-target (a 'history)))))
+
+(define (display-result economy counter period)
+  (newline)
+  (display "[")
+  (display (* period (+ 1 counter)))
+  (display "] ")
+  (display "CURRENT-TARGET: ")
+  (display (target-status economy))
+  (display " | STRIDE: ")
+  (display (plan-stride economy)))
+
+(define (run-n-times economy period n)
+  (define (iter economy period counter)
+    (if (> counter n)
+        'done-planning
+        (begin
+          (simulate-til economy period)
+          (display-result economy counter period)
+          (iter  economy period (+ counter 1)))))
+  (iter economy period 0))
